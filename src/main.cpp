@@ -4,171 +4,87 @@
 #include <Geode/modify/CCSprite.hpp>
 #include <Geode/modify/EditorUI.hpp>
 
+#include <Geode/utils/file.hpp>
+#include <Geode/loader/SettingV3.hpp>
+
 using namespace geode::prelude;
+using namespace geode::utils::file;
 
+std::filesystem::path defaultDirectory;
 
-void drawRecursive(CCNode* parent) {
+$execute {
+	defaultDirectory = Mod::get()->getSettingValue<std::filesystem::path>("default-directory");
 
-	CCSprite* sprite = static_cast<CCSprite*>(parent);
-	ccBlendFunc ogBlendFunc = sprite->getBlendFunc();
-
-	CCSpriteBatchNode* batchNode = sprite->getBatchNode();
-	if (batchNode != nullptr) {
-		ccBlendFunc batchNodeBlendFunc = batchNode->getBlendFunc();
-		sprite->setBlendFunc(batchNodeBlendFunc);
-	}
-
-	GameObject* gameObject = dynamic_cast<GameObject*>(parent);
-	if (gameObject != nullptr) {
-		log::debug("{}", gameObject->m_baseColor->m_customColor);
-		gameObject->setOpacity(gameObject->m_baseColor->m_opacity * 255);
-	}
-
-	sprite->draw();
-	sprite->setBlendFunc(ogBlendFunc);
-
-	CCArray* children = parent->getChildren();
-	for (int i = 0; i < parent->getChildrenCount(); i++) {
-		CCNode* childNode = (CCNode*)children->objectAtIndex(i);
-		drawRecursive(childNode);
-	}
-}
-
+	listenForSettingChanges("default-directory", [](std::filesystem::path value) {
+		defaultDirectory = value;
+	});
+};
 
 class $modify(EditorUIHook, EditorUI) {
 
-	struct Fields {
-		bool isTakingImage = false;
-		CCArray* tempSelected = nullptr;
-	};
+	void onButton(CCObject * sender) {
+		CCArray* selected = getSelectedObjects()->shallowCopy();
 
-	void onButton(CCObject*) {
+		auto options = FilePickOptions();
+		auto filter = FilePickOptions::Filter();
+		filter.description = "PNG Images"; filter.files = { "*.png" };
+		options.defaultPath = defaultDirectory;
+		options.filters = { filter };
 
-		log::debug("onButton called.");
+		file::pick(PickMode::SaveFile, options).listen(
+			[selected](Result<std::filesystem::path>* result) {
+				if (!result->isOk()) {
+					return;
+				}
 
-		CCArray* selected = getSelectedObjects();
-		log::debug("selected size: {}", selected->count());
+				std::filesystem::path path = result->unwrap();
+				defaultDirectory = path.parent_path();
+				if (!path.string().ends_with(".png"))
+					path += ".png";
 
-		m_fields->tempSelected = selected->shallowCopy();
-		m_fields->tempSelected->retain();
-		deselectAll();
-		log::debug("m_fields->tempSelected: {}", m_fields->tempSelected);
-		log::debug("m_fields->tempSelected size: {}", m_fields->tempSelected->count());
-		m_fields->isTakingImage = true;
-
-		std::vector<CCObject*> objs;
-		for (int i = 0; i < m_fields->tempSelected->count(); i++)
-			objs.push_back(m_fields->tempSelected->objectAtIndex(i));
-
+				saveObjectsToImage(selected, path.string().c_str());
+			}
+		);
 	}
 
-	void saveObjectsToImage(CCArray* objects, const char* filePath) {
-		log::debug("saving objects to {}", filePath);
+	static void saveObjectsToImage(CCArray* objects, const char* filePath) {
 
-		log::debug("creating render texture...");
-		CCRenderTexture* renderTexture = CCRenderTexture::create(1920, 1080, CCTexture2DPixelFormat::kCCTexture2DPixelFormat_Default);
-		log::debug("running beginWithClear...");
-		renderTexture->beginWithClear(0, 0, 0, 0);
-
-
-		log::debug("beginWithClear done.");
+		std::ostringstream buffer;
 		for (int i = 0; i < objects->count(); i++) {
-			CCNode* node = static_cast<CCNode*>(objects->objectAtIndex(i));
-			GameObject* gameObj = static_cast<GameObject*>(node);
-
-			ccColor3B selectCol = ccColor3B(0, 255, 0);
-			drawRecursive(node);
+			GameObject* obj = static_cast<GameObject*>(objects->objectAtIndex(i));
+			buffer << obj->getSaveString(LevelEditorLayer::get()) << ";";
 		}
+		std::string objString = buffer.str();
+
+		CCArray* objArray = CCArray::create();
+		CCSprite* sprite = EditorUI::get()->spriteFromObjectString(objString, false, false, INT_MAX, objArray, nullptr, nullptr);
+		LevelEditorLayer::get()->updateObjectColors(objArray);
+		for (int i = 0; i < objArray->count(); i++) {
+			GameObject* gameObject = static_cast<GameObject*>(objArray->objectAtIndex(i));
+			gameObject->setOpacity(gameObject->m_baseColor->m_opacity * 255);
+		}
+
+		CCSize scaledContentSize = sprite->getScaledContentSize();
+		sprite->setPosition(scaledContentSize / 2);
+
+		CCRenderTexture* renderTexture = CCRenderTexture::create(scaledContentSize.width, scaledContentSize.height, CCTexture2DPixelFormat::kCCTexture2DPixelFormat_Default);
+		renderTexture->beginWithClear(0, 0, 0, 0);
+		sprite->visit();
 		CCImage* image = renderTexture->newCCImage();
-		log::debug("saving CCImage to file...");
 		image->saveToFile(filePath, false);
 		renderTexture->end();
-		log::debug("successfully saved objects!");
-	}
 
-	void sortByZOrder(CCArray* objects) {
-		GameObject** tempSelectedBegin = reinterpret_cast<GameObject**>(objects->data->arr);
-
-		log::debug("About to sort...");
-		std::sort(tempSelectedBegin, tempSelectedBegin + objects->data->num, [](GameObject* a, GameObject* b) {
-
-			log::debug("Sorting a to b...");
-			bool prioritizedOnHierarchy = false;
-			
-			if (a->getParent() != nullptr && b->getParent() != nullptr) {
-				int a_index = a->getParent()->getChildren()->indexOfObject(a);
-				int b_index = b->getParent()->getChildren()->indexOfObject(b);
-				log::debug("a index: {}, b index: {}", a_index, b_index);
-				prioritizedOnHierarchy = a_index < b_index;
-
-				CCSpriteBatchNode* a_batchNode = a->getBatchNode();
-				CCSpriteBatchNode* b_batchNode = b->getBatchNode();
-
-				if (a_batchNode != nullptr && b_batchNode != nullptr) {
-
-					log::debug("batch node exists.");
-					int a_batchNode_index = a_batchNode->getParent()->getChildren()->indexOfObject(a_batchNode);
-					int b_batchNode_index = b_batchNode->getParent()->getChildren()->indexOfObject(b_batchNode);
-					log::debug("batch node a index: {}, batch node b index: {}", a_batchNode_index, b_batchNode_index);
-
-					prioritizedOnHierarchy = (a_batchNode_index > b_batchNode_index) || prioritizedOnHierarchy;
-				}
-			}
-			else {
-				log::debug("Either a or b has no parent. Skipping hierarchy logic...");
-			}
-
-			log::debug("Returning answer...");
-			return a->getZOrder() < b->getZOrder()
-				|| (int)a->getObjectZLayer() < (int)b->getObjectZLayer()
-				|| a->m_editorLayer < b->m_editorLayer
-				|| prioritizedOnHierarchy;
-			});
-
-	}
-
-	void customUpdate(float p0) {
-		if (m_fields->isTakingImage) {
-			LevelEditorLayer::get()->updateObjectColors(m_fields->tempSelected);
-			
-			log::debug("sorting m_fields->tempSelected by z order...");
-			sortByZOrder(m_fields->tempSelected);
-
-			log::debug("taking image...");
-			log::debug("m_fields->tempSelected: {}", m_fields->tempSelected);
-			saveObjectsToImage(m_fields->tempSelected, "C:\\Users\\rando\\AppData\\Local\\GeometryDash\\test_thing.png");
-			log::debug("saved image!");
-
-			selectObjects(m_fields->tempSelected, false);
-			m_fields->tempSelected->release();
-			log::debug("reselected objects.");
-		}
-		m_fields->isTakingImage = false;
 	}
 
 	void createMoveMenu() {
-		log::debug("createMoveMenu called.");
 		EditorUI::createMoveMenu();
-		log::debug("ORIGINAL createMoveMenu called.");
 
-		CCSprite* sprite = CCSprite::create("dumButton.png"_spr);
-		auto btn = CCMenuItemSpriteExtra::create(
-			sprite,
-			this,
-			menu_selector(EditorUIHook::onButton)
-		);
-		log::debug("btn created.");
+		auto* btn = getSpriteButton("importButton.png"_spr, menu_selector(EditorUIHook::onButton), nullptr, 0.75f);
 		m_editButtonBar->m_buttonArray->addObject(btn);
-		log::debug("btn added as object.");
 
 		auto rows = GameManager::sharedState()->getIntGameVariable("0049");
-		log::debug("Got game variable 0049.");
 		auto cols = GameManager::sharedState()->getIntGameVariable("0050");
-		log::debug("Got game variable 0050.");
 		m_editButtonBar->reloadItems(rows, cols);
-		log::debug("Reloaded editorButtonBar items.");
-
-		this->schedule(schedule_selector(EditorUIHook::customUpdate), 0.05f);
 
 	}
 
