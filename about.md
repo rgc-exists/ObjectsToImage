@@ -17,4 +17,4 @@ If you want to set the default directory to something other than the AppData dir
 
 # Platform Support
 For now, this mod only supports Windows, as I doubt Android and/or iOS would work without major changes.  
-I also do not have an apple device to test MacOS, so if anyone wants to verify that it works and/or make the nessecary changes, feel free to make a pull request.
+I also do not have an apple device to test MacOS, so if anyone wants to verify that it works and/or make the nessecary changes, feel free to make a [pull request](https://github.com/rgc-exists/ObjectsToImage).
