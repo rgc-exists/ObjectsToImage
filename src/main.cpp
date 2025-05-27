@@ -27,18 +27,17 @@ class $modify(EditorUIHook, EditorUI) {
 			m_pickListener;
 	};
 
+
 	void saveToChosenPath( 
 		Task<Result<std::filesystem::path>>::Event* event) {
 
 		if (event->isCancelled()) {
 			return;
 		}
-		log::debug("saveToChosenPath called.");
 		if (auto result = event->getValue()) {
 			if (result->isErr()) {
 				log::error("ERROR: Result of file::pick was an error.");
 			}
-			log::debug("Result was not error.");
 
 			CCArray* selected = getSelectedObjects()->shallowCopy();
 			std::filesystem::path path = result->unwrap();
