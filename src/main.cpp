@@ -37,6 +37,7 @@ class $modify(EditorUIHook, EditorUI) {
 		if (auto result = event->getValue()) {
 			if (result->isErr()) {
 				log::error("ERROR: Result of file::pick was an error.");
+				return;
 			}
 
 			CCArray* selected = getSelectedObjects()->shallowCopy();
