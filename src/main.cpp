@@ -5,7 +5,7 @@
 #include <Geode/modify/EditorUI.hpp>
 
 #include <Geode/utils/file.hpp>
-#include <Geode/loader/SettingV3.hpp>
+#include <Geode/utils/string.hpp>
 
 using namespace geode::prelude;
 using namespace geode::utils::file;
@@ -22,8 +22,37 @@ $execute {
 
 class $modify(EditorUIHook, EditorUI) {
 
+	struct Fields {
+		geode::EventListener<geode::Task<geode::Result<std::filesystem::path>>>
+			m_pickListener;
+	};
+
+	void saveToChosenPath( 
+		Task<Result<std::filesystem::path>>::Event* event) {
+
+		if (event->isCancelled()) {
+			return;
+		}
+		log::debug("saveToChosenPath called.");
+		if (auto result = event->getValue()) {
+			if (result->isErr()) {
+				log::error("ERROR: Result of file::pick was an error.");
+			}
+			log::debug("Result was not error.");
+
+			CCArray* selected = getSelectedObjects()->shallowCopy();
+			std::filesystem::path path = result->unwrap();
+
+			defaultDirectory = path.parent_path();
+			std::string pathStr = string::pathToString(path);
+			if (!pathStr.ends_with(".png"))
+				pathStr += ".png";
+
+			saveObjectsToImage(selected, pathStr.c_str());
+		}
+	}
+
 	void onButton(CCObject * sender) {
-		CCArray* selected = getSelectedObjects()->shallowCopy();
 
 		auto options = FilePickOptions();
 		auto filter = FilePickOptions::Filter();
@@ -31,20 +60,8 @@ class $modify(EditorUIHook, EditorUI) {
 		options.defaultPath = defaultDirectory;
 		options.filters = { filter };
 
-		file::pick(PickMode::SaveFile, options).listen(
-			[selected](Result<std::filesystem::path>* result) {
-				if (!result->isOk()) {
-					return;
-				}
-
-				std::filesystem::path path = result->unwrap();
-				defaultDirectory = path.parent_path();
-				if (!path.string().ends_with(".png"))
-					path += ".png";
-
-				saveObjectsToImage(selected, path.string().c_str());
-			}
-		);
+		m_fields->m_pickListener.bind(this, &EditorUIHook::saveToChosenPath);
+		m_fields->m_pickListener.setFilter(file::pick(file::PickMode::SaveFile, options));
 	}
 
 	static void saveObjectsToImage(CCArray* objects, const char* filePath) {

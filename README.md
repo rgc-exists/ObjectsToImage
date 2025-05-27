@@ -23,4 +23,4 @@ I also do not have an apple device to test MacOS, so if anyone wants to verify t
 I am still somewhat inexperienced with GD mod development, so I'd like to thank some other mods whose code I took inspiration from.
 - [Reference Image](https://github.com/matcool/geode-mods/blob/main/reference-image/main.cpp) - For showing me how to add a button to the editor.
 - [Object Workshop](https://github.com/FireMario211/Object-Workshop/blob/66548f35fa3929e5168e1103596565ac4caedc5b/src/nodes/ObjectItem.cpp#L167-L184) - For showing a better method of creating object images than my original, much messier and horrible method of capturing all the objects manually. 
-- HiImJasmine, Undefined06855, Firee, and others from the #dev-help channel in the Geode discord server. I could not have done this without the help of more experienced modders. :)
+- HiImJasmine, Undefined06855, Firee Fleeym, Prevter, and others from the #dev-help channel in the Geode discord server. I could not have done this without the help of more experienced modders. :)
