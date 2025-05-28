@@ -14,15 +14,10 @@ std::filesystem::path defaultDirectory;
 bool blendingApproximation = true;
 
 $execute {
+	defaultDirectory = Mod::get()->getSettingValue<std::filesystem::path>("default-directory");\
 
-	defaultDirectory = Mod::get()->getSettingValue<std::filesystem::path>("default-directory");
 	listenForSettingChanges("default-directory", [](std::filesystem::path value) {
 		defaultDirectory = value;
-	});
-
-	blendingApproximation = Mod::get()->getSettingValue<bool>("blending-approximation");
-	listenForSettingChanges("blending-approximation", [](bool value) {
-		blendingApproximation = value;
 	});
 };
 
@@ -60,18 +55,29 @@ class $modify(EditorUIHook, EditorUI) {
 
 
 	void onButton(CCObject * sender) {
+
 		if (getSelectedObjects()->count() <= 0) {
 			return;
 		}
 
-		auto options = FilePickOptions();
-		auto filter = FilePickOptions::Filter();
-		filter.description = "PNG Images"; filter.files = { "*.png" };
-		options.defaultPath = defaultDirectory;
-		options.filters = { filter };
+		geode::createQuickPopup(
+			"APPROXIMATE BLENDING?",
+			"TL;DR: Try both and see what works.\n\nDue to how colors with blending enabled work, it is impossible to perfectly recreate the effect with a transparent background.\nWould you like to enable the somewhat innacurate fix?",
+			"Yes", "No",
+			[this](auto, bool btn2) {
 
-		m_fields->m_pickListener.bind(this, &EditorUIHook::saveToChosenPath);
-		m_fields->m_pickListener.setFilter(file::pick(file::PickMode::SaveFile, options));
+				blendingApproximation = !btn2;
+
+				auto options = FilePickOptions();
+				auto filter = FilePickOptions::Filter();
+				filter.description = "PNG Images"; filter.files = { "*.png" };
+				options.defaultPath = defaultDirectory;
+				options.filters = { filter };
+
+				m_fields->m_pickListener.bind(this, &EditorUIHook::saveToChosenPath);
+				m_fields->m_pickListener.setFilter(file::pick(file::PickMode::SaveFile, options));
+			}
+		);
 	}
 
 	static void saveObjectsToImage(CCArray* objects, const char* filePath) {

@@ -5,7 +5,7 @@
 	},
 	"id": "rgc_exists.objectstoimage",
 	"name": "ObjectsToImage",
-	"version": "v1.0.3",
+	"version": "v1.0.4",
 	"developer": "RGC Exists",
 	"description": "Convert selected GD objects to an image.",
 	"tags": [ "editor", "offline", "utility" ],
@@ -27,11 +27,6 @@
 			"type": "title",
 			"name": "Experimental",
 			"description": "See the mod description for info on these settings."
-		},
-		"blending-approximation": {
-			"type": "bool",
-			"name": "Blending Approximation (See Mod Description)",
-			"default":  true
 		}
 	}
 }
