@@ -17,7 +17,7 @@ If you want to set the default directory to something other than the AppData dir
 
 # Note About Colors with Blending
 **Doing additive blending on a transparent background is physically impossible.** 
-As such, the mod has a ***SETTING*** (off by default) that approximates the opacity for objects with blending using a makeshift method.  
+As such, the mod has a ***SETTING*** (on by default for now) that approximates the opacity for objects with blending using a makeshift method.  
   
 ***I made this option in a rush. It's barely tested, so it MIGHT be better to have it off.***  
 Or maybe the best option changes based on the individual images you're changing. Who knows.  

@@ -11,7 +11,7 @@ using namespace geode::prelude;
 using namespace geode::utils::file;
 
 std::filesystem::path defaultDirectory;
-bool blendingApproximation = false;
+bool blendingApproximation = true;
 
 $execute {
 

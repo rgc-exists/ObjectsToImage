@@ -1,3 +1,6 @@
+# 1.0.3
+- Make opacity approximation on by default.
+
 # 1.0.2
 - Add makeshift opacity approximation for blending as a setting since doing additive blending on a transparent background is impossible.
 - Fix crash when exporting with no selected objects
