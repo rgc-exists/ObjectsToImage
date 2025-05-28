@@ -60,6 +60,9 @@ class $modify(EditorUIHook, EditorUI) {
 
 
 	void onButton(CCObject * sender) {
+		if (getSelectedObjects()->count() <= 0) {
+			return;
+		}
 
 		auto options = FilePickOptions();
 		auto filter = FilePickOptions::Filter();
