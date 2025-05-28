@@ -15,6 +15,16 @@ If you want to set the default directory to something other than the AppData dir
   
 - If you wish to capture an object with the colors a certain way, but the colors don't align the way you want when the camera is in range of the objects, you can press F1 in another part of the level to "lock the colors". You can also press F2 later to unlock them.
 
+# Note About Colors with Blending
+**Doing additive blending on a transparent background is physically impossible.** 
+As such, the mod has a ***SETTING*** (off by default) that approximates the opacity for objects with blending using a makeshift method.  
+  
+***I made this option in a rush. It's barely tested, so it MIGHT be better to have it off.***  
+Or maybe the best option changes based on the individual images you're changing. Who knows.  
+  
+*The method with which it does this, which is taking the highest of the R, G, and B values and setting the opacity to that, is pretty makeshift.  
+If anyone has a better idea, feel free to suggest it or make a [Pull Request](https://github.com/rgc-exists/ObjectsToImage).*
+
 # Platform Support
 For now, this mod only supports Windows, as I doubt Android and/or iOS would work without major changes.  
 UPDATE: The mod has been 100% confirmed to NOT work on MacOS as is.

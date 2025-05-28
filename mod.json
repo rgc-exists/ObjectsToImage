@@ -22,6 +22,16 @@
 			"type": "folder",
 			"name": "Default Save Directory",
 			"default": "{gd_save_dir}"
+		},
+		"experimental-title": {
+			"type": "title",
+			"name": "Experimental",
+			"description": "See the mod description for info on these settings."
+		},
+		"blending-approximation": {
+			"type": "bool",
+			"name": "Blending Approximation (See Mod Description)",
+			"default":  false
 		}
 	}
 }

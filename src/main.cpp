@@ -11,12 +11,18 @@ using namespace geode::prelude;
 using namespace geode::utils::file;
 
 std::filesystem::path defaultDirectory;
+bool blendingApproximation = false;
 
 $execute {
-	defaultDirectory = Mod::get()->getSettingValue<std::filesystem::path>("default-directory");
 
+	defaultDirectory = Mod::get()->getSettingValue<std::filesystem::path>("default-directory");
 	listenForSettingChanges("default-directory", [](std::filesystem::path value) {
 		defaultDirectory = value;
+	});
+
+	blendingApproximation = Mod::get()->getSettingValue<bool>("blending-approximation");
+	listenForSettingChanges("blending-approximation", [](bool value) {
+		blendingApproximation = value;
 	});
 };
 
@@ -52,6 +58,7 @@ class $modify(EditorUIHook, EditorUI) {
 		}
 	}
 
+
 	void onButton(CCObject * sender) {
 
 		auto options = FilePickOptions();
@@ -76,10 +83,21 @@ class $modify(EditorUIHook, EditorUI) {
 		CCArray* objArray = CCArray::create();
 		CCSprite* sprite = EditorUI::get()->spriteFromObjectString(objString, false, false, INT_MAX, objArray, nullptr, nullptr);
 		LevelEditorLayer::get()->updateObjectColors(objArray);
+
 		for (int i = 0; i < objArray->count(); i++) {
 			GameObject* gameObject = static_cast<GameObject*>(objArray->objectAtIndex(i));
-			gameObject->setOpacity(gameObject->m_baseColor->m_opacity * 255);
+
+			gameObject->setOpacity(255);
+			if (blendingApproximation) {
+				if (gameObject->m_shouldBlendBase) {
+					applyFakeBlendingOpacity(static_cast<CCSprite*>(gameObject));
+				}
+				if (gameObject->m_shouldBlendDetail) {
+					applyFakeBlendingOpacity(gameObject->m_colorSprite);
+				}
+			}
 		}
+
 
 		CCSize scaledContentSize = sprite->getScaledContentSize();
 		sprite->setPosition(scaledContentSize / 2);
@@ -91,6 +109,11 @@ class $modify(EditorUIHook, EditorUI) {
 		image->saveToFile(filePath, false);
 		renderTexture->end();
 
+	}
+
+	static void applyFakeBlendingOpacity(CCSprite* sprite) {
+		ccColor3B color = sprite->getColor();
+		sprite->setOpacity(std::max({ color.r, color.g, color.b }));
 	}
 
 	void createMoveMenu() {
