@@ -1,6 +1,6 @@
 # 1.0.4
 - Add popup to ask user if they want opacity approximation.
-- 
+
 - # 1.0.3
 - Make opacity approximation on by default.
 

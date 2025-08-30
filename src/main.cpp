@@ -14,7 +14,7 @@ std::filesystem::path defaultDirectory;
 bool blendingApproximation = true;
 
 $execute {
-	defaultDirectory = Mod::get()->getSettingValue<std::filesystem::path>("default-directory");\
+	defaultDirectory = Mod::get()->getSettingValue<std::filesystem::path>("default-directory");
 
 	listenForSettingChanges("default-directory", [](std::filesystem::path value) {
 		defaultDirectory = value;
