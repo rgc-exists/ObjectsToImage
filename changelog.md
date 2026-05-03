@@ -1,3 +1,6 @@
+# 1.0.5
+- Update to 2.208
+
 # 1.0.4
 - Add popup to ask user if they want opacity approximation.
 

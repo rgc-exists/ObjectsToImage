@@ -16,41 +16,24 @@ bool blendingApproximation = true;
 $execute {
 	defaultDirectory = Mod::get()->getSettingValue<std::filesystem::path>("default-directory");
 
-	listenForSettingChanges("default-directory", [](std::filesystem::path value) {
+	listenForSettingChanges< std::filesystem::path>("default-directory", [](std::filesystem::path value) {
 		defaultDirectory = value;
 	});
 };
 
 class $modify(EditorUIHook, EditorUI) {
 
-	struct Fields {
-		geode::EventListener<geode::Task<geode::Result<std::filesystem::path>>>
-			m_pickListener;
-	};
-
 
 	void saveToChosenPath( 
-		Task<Result<std::filesystem::path>>::Event* event) {
+		std::filesystem::path path) {
+		CCArray* selected = getSelectedObjects()->shallowCopy();
 
-		if (event->isCancelled()) {
-			return;
-		}
-		if (auto result = event->getValue()) {
-			if (result->isErr()) {
-				log::error("ERROR: Result of file::pick was an error.");
-				return;
-			}
+		defaultDirectory = path.parent_path();
+		std::string pathStr = string::pathToString(path);
+		if (!pathStr.ends_with(".png"))
+			pathStr += ".png";
 
-			CCArray* selected = getSelectedObjects()->shallowCopy();
-			std::filesystem::path path = result->unwrap();
-
-			defaultDirectory = path.parent_path();
-			std::string pathStr = string::pathToString(path);
-			if (!pathStr.ends_with(".png"))
-				pathStr += ".png";
-
-			saveObjectsToImage(selected, pathStr.c_str());
-		}
+		saveObjectsToImage(selected, pathStr.c_str());
 	}
 
 
@@ -60,22 +43,18 @@ class $modify(EditorUIHook, EditorUI) {
 			return;
 		}
 
-		geode::createQuickPopup(
-			"APPROXIMATE BLENDING?",
-			"TL;DR: Try both and see what works.\n\nDue to how colors with blending enabled work, it is impossible to perfectly recreate the effect with a transparent background.\nWould you like to enable the somewhat innacurate fix?",
-			"Yes", "No",
-			[this](auto, bool btn2) {
+		auto options = FilePickOptions();
+		auto filter = FilePickOptions::Filter();
+		filter.description = "PNG Images"; filter.files = { "*.png" };
+		options.defaultPath = defaultDirectory;
+		options.filters = { filter };
 
-				blendingApproximation = !btn2;
-
-				auto options = FilePickOptions();
-				auto filter = FilePickOptions::Filter();
-				filter.description = "PNG Images"; filter.files = { "*.png" };
-				options.defaultPath = defaultDirectory;
-				options.filters = { filter };
-
-				m_fields->m_pickListener.bind(this, &EditorUIHook::saveToChosenPath);
-				m_fields->m_pickListener.setFilter(file::pick(file::PickMode::SaveFile, options));
+		async::spawn(
+			file::pick(file::PickMode::SaveFile, options),
+			[this](Result<std::optional<std::filesystem::path>> result) { // note that this is not a pointer anymore!
+				if (result.isOk()) {
+					this->saveToChosenPath(result.unwrap().value());
+				}
 			}
 		);
 	}
